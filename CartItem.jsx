@@ -3,11 +3,9 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  increaseQuantity,
-  decreaseQuantity,
-  removeFromCart,
+  updateQuantity,
+  removeItem,
   selectCartItems,
-  selectCartTotal,
   selectCartCount
 } from "./CartSlice";
 import "./App.css";
@@ -18,7 +16,6 @@ function Navbar() {
   return (
     <nav className="navbar">
       <Link to="/" className="brand">Paradise Nursery</Link>
-
       <div className="nav-links">
         <Link to="/">Home</Link>
         <Link to="/plants">Plants</Link>
@@ -32,12 +29,56 @@ function Navbar() {
 
 function CartItem() {
   const dispatch = useDispatch();
-  const items = useSelector(selectCartItems);
-  const total = useSelector(selectCartTotal);
+  const cartItems = useSelector(selectCartItems);
 
   const [checkoutMessage, setCheckoutMessage] = React.useState("");
 
-  const formatPrice = (price) => `$${price.toFixed(2)}`;
+  // Calculate total using each item's cost and quantity.
+  const totalAmount = cartItems.reduce(
+    (total, item) => total + Number(item.cost ?? item.price ?? 0) * item.quantity,
+    0
+  );
+
+  // Update quantity using the Redux updateQuantity action.
+  const handleIncrement = (item) => {
+    dispatch(
+      updateQuantity({
+        name: item.name,
+        quantity: item.quantity + 1
+      })
+    );
+  };
+
+  const handleDecrement = (item) => {
+    if (item.quantity <= 1) {
+      dispatch(removeItem(item.name));
+    } else {
+      dispatch(
+        updateQuantity({
+          name: item.name,
+          quantity: item.quantity - 1
+        })
+      );
+    }
+  };
+
+  const handleRemove = (item) => {
+    dispatch(removeItem(item.name));
+  };
+
+  const handleCheckout = () => {
+    setCheckoutMessage("Coming Soon!");
+    if (typeof window !== "undefined") {
+      window.alert("Coming Soon!");
+    }
+  };
+
+  const handleContinueShopping = () => {
+    window.location.href = "/plants";
+  };
+
+  const formatPrice = (value) =>
+    `$${Number(value ?? 0).toFixed(2)}`;
 
   return (
     <>
@@ -49,22 +90,31 @@ function CartItem() {
           <p>Review your plants and manage your order.</p>
         </header>
 
-        {items.length === 0 ? (
+        {cartItems.length === 0 ? (
           <section className="empty-cart">
             <h2>Your cart is empty</h2>
             <p>Discover beautiful houseplants for your home.</p>
-            <Link to="/plants" className="primary-button">
+            <button
+              className="continue-shopping-button"
+              onClick={handleContinueShopping}
+            >
               Continue Shopping
-            </Link>
+            </button>
           </section>
         ) : (
-          <>
-            <section aria-label="Cart items">
-              {items.map((item) => (
-                <article className="cart-row" key={item.id}>
+          <section className="cart-container">
+            {cartItems.map((item) => {
+              const unitCost = Number(item.cost ?? item.price ?? 0);
+
+              return (
+                <article className="cart-row" key={item.id ?? item.name}>
                   <img
                     className="product-image"
-                    src={`https://images.unsplash.com/${item.image}?auto=format&fit=crop&w=300&q=80`}
+                    src={
+                      item.image?.startsWith("http")
+                        ? item.image
+                        : `https://images.unsplash.com/${item.image}?auto=format&fit=crop&w=300&q=80`
+                    }
                     alt={item.name}
                     onError={(event) => {
                       event.currentTarget.src =
@@ -74,10 +124,10 @@ function CartItem() {
 
                   <div className="cart-details">
                     <h2>{item.name}</h2>
-                    <p>Unit price: {formatPrice(item.price)}</p>
+                    <p>Unit Price: {formatPrice(unitCost)}</p>
                     <p>
-                      Item total:{" "}
-                      {formatPrice(item.price * item.quantity)}
+                      Item Total:{" "}
+                      {formatPrice(unitCost * item.quantity)}
                     </p>
                   </div>
 
@@ -88,12 +138,9 @@ function CartItem() {
                       type="button"
                       className="quantity-button"
                       aria-label={`Decrease ${item.name} quantity`}
-                      onClick={() =>
-                        dispatch(decreaseQuantity(item.id))
-                      }
-                      disabled={item.quantity <= 1}
+                      onClick={() => handleDecrement(item)}
                     >
-                      −
+                      -
                     </button>
 
                     <span>{item.quantity}</span>
@@ -102,42 +149,38 @@ function CartItem() {
                       type="button"
                       className="quantity-button"
                       aria-label={`Increase ${item.name} quantity`}
-                      onClick={() =>
-                        dispatch(increaseQuantity(item.id))
-                      }
+                      onClick={() => handleIncrement(item)}
                     >
                       +
                     </button>
 
                     <button
                       type="button"
-                      className="delete-button"
-                      onClick={() =>
-                        dispatch(removeFromCart(item.id))
-                      }
+                      className="cart-item-delete"
+                      onClick={() => handleRemove(item)}
                     >
                       Delete
                     </button>
                   </div>
                 </article>
-              ))}
-            </section>
+              );
+            })}
 
             <section className="cart-total">
-              <h2>Total Items: {items.reduce(
-                (sum, item) => sum + item.quantity, 0
-              )}</h2>
+              <h2>
+                Total Items:{" "}
+                {cartItems.reduce(
+                  (sum, item) => sum + Number(item.quantity),
+                  0
+                )}
+              </h2>
 
-              <h2>Total Amount: {formatPrice(total)}</h2>
+              <h2>Total Amount: {formatPrice(totalAmount)}</h2>
 
               <button
                 type="button"
                 className="checkout-button"
-                onClick={() =>
-                  setCheckoutMessage(
-                    "Coming Soon! Online checkout will be available soon."
-                  )
-                }
+                onClick={handleCheckout}
               >
                 Checkout
               </button>
@@ -146,13 +189,15 @@ function CartItem() {
                 <p role="status">{checkoutMessage}</p>
               )}
 
-              <div>
-                <Link to="/plants" className="continue-button">
-                  Continue Shopping
-                </Link>
-              </div>
+              <button
+                type="button"
+                className="continue-shopping-button"
+                onClick={handleContinueShopping}
+              >
+                Continue Shopping
+              </button>
             </section>
-          </>
+          </section>
         )}
       </main>
     </>
