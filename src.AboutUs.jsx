@@ -9,7 +9,7 @@ function AboutUs() {
         Welcome to Paradise Nursery, your one-stop shop for beautiful indoor plants to brighten up your living space!
       </p>
       <p className="about-us-content">
-        Our mission is to provide high-quality plants that enhance your home environment and promote a healthier lifestyle.
+        Our mission is to provide high-quality plants that enhance your home environment, foster a deeper connection with nature, and promote a healthier lifestyle.
       </p>
     </div>
   );
