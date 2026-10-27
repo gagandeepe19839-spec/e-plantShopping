@@ -1,78 +1,33 @@
+import { createSlice } from '@reduxjs/toolkit';
 
-import { createSlice } from "@reduxjs/toolkit";
-
-const initialState = {
-  items: []
-};
-
-const cartSlice = createSlice({
-  name: "cart",
-  initialState,
+export const CartSlice = createSlice({
+  name: 'cart',
+  initialState: {
+    items: [], // Array of cart items
+  },
   reducers: {
-    addToCart: (state, action) => {
-      const product = action.payload;
-
-      const existingItem = state.items.find(
-        (item) => item.id === product.id
-      );
-
-      if (!existingItem) {
-        state.items.push({
-          ...product,
-          quantity: 1
-        });
+    addItem: (state, action) => {
+      const { name, image, cost } = action.payload;
+      const existingItem = state.items.find(item => item.name === name);
+      if (existingItem) {
+        existingItem.quantity++;
+      } else {
+        state.items.push({ name, image, cost, quantity: 1 });
       }
     },
-
-    removeFromCart: (state, action) => {
-      state.items = state.items.filter(
-        (item) => item.id !== action.payload
-      );
+    removeItem: (state, action) => {
+      state.items = state.items.filter(item => item.name !== action.payload);
     },
-
-    increaseQuantity: (state, action) => {
-      const item = state.items.find(
-        (item) => item.id === action.payload
-      );
-
-      if (item) {
-        item.quantity += 1;
+    updateQuantity: (state, action) => {
+      const { name, quantity } = action.payload;
+      const itemToUpdate = state.items.find(item => item.name === name);
+      if (itemToUpdate) {
+        itemToUpdate.quantity = quantity;
       }
     },
-
-    decreaseQuantity: (state, action) => {
-      const item = state.items.find(
-        (item) => item.id === action.payload
-      );
-
-      if (item && item.quantity > 1) {
-        item.quantity -= 1;
-      }
-    },
-
-    clearCart: (state) => {
-      state.items = [];
-    }
-  }
+  },
 });
 
-export const {
-  addToCart,
-  removeFromCart,
-  increaseQuantity,
-  decreaseQuantity,
-  clearCart
-} = cartSlice.actions;
+export const { addItem, removeItem, updateQuantity } = CartSlice.actions;
 
-export const selectCartItems = (state) => state.cart.items;
-
-export const selectCartCount = (state) =>
-  state.cart.items.reduce((total, item) => total + item.quantity, 0);
-
-export const selectCartTotal = (state) =>
-  state.cart.items.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
-  );
-
-export default cartSlice.reducer;
+export default CartSlice.reducer;
